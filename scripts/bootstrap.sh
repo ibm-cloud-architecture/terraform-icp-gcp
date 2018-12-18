@@ -54,10 +54,10 @@ docker_install() {
 
     apt-get update && apt-get install -y docker-ce
   elif [ ! -z "${package_location}" ]; then
-    while [ ! -f "${package_location}" ]; do
-      echo "Waiting for docker package at ${package_location} ... "
-      sleep 1
-    done
+    if [[ "${package_location:0:2}" == "gs" ]]; then
+      gsutil cp ${package_location} /tmp/$(basename ${package_location})
+      package_location=/tmp/$(basename ${package_location})
+    fi
 
     echo "Install docker from ${package_location}"
     chmod u+x "${package_location}"
@@ -72,35 +72,29 @@ docker_install() {
 
   partprobe
   lsblk
+
   systemctl enable docker
+
   storage_driver=`docker info | grep 'Storage Driver:' | cut -d: -f2 | sed -e 's/\s//g'`
   echo "storage driver is ${storage_driver}"
   if [ "${storage_driver}" == "devicemapper" ]; then
-    # check if loop lvm mode is enabled
-    if [ -z `docker info | grep 'loop file'` ]; then
-      echo "Direct-lvm mode is configured."
-      return 0
-    fi
+    systemctl stop docker
 
-    # TODO if docker block device is not provided, make sure we use overlay2 storage driver
-    if [ -z "${docker_disk}" ]; then
-      echo "docker loop-lvm mode is configured and a docker block device was not specified!  This is not recommended for production!"
-      return 0
-    fi
+    # remove storage-driver from docker cmdline
+    sed -i -e '/ExecStart/ s/--storage-driver=devicemapper//g' /usr/lib/systemd/system/docker.service
 
-    echo "A docker disk ${docker_disk} is provided, setting up direct-lvm mode ..."
-
-    # docker installer uses devicemapper already
-    cat > /etc/docker/daemon.json <<EOF
+    # docker installer uses devicemapper already; switch to overlay2
+    cat > /tmp/daemon.json <<EOF
 {
+  "storage-driver": "overlay2",
   "storage-opts": [
-    "dm.directlvm_device=${docker_disk}"
+    "overlay2.override_kernel_check=true"
   ]
 }
 EOF
-  elif [ ! -z "${docker_disk}" ]; then
-    echo "Setting up ${docker_disk} and mounting at /var/lib/docker ..."
+    mv /tmp/daemon.json /etc/docker/daemon.json
 
+    systemctl daemon-reload
   fi
 
   systemctl restart docker

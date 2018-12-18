@@ -1,5 +1,5 @@
 resource "google_storage_bucket" "icp-binaries" {
-  count = "${var.existing_storage_bucket == "" ? 1 : 0}"
+  count = "${(substr(var.image_location, 0, 2) != "gs" && substr(var.docker_package_location, 0, 2 != "gs")) ? 1 : 0}"
   name   = "icp-binaries-${random_id.clusterid.hex}"
   storage_class = "REGIONAL"
   location = "${var.region}"
