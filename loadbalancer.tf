@@ -87,6 +87,10 @@ EOF
   }
 }
 
+/* TODO: SSL health checks don't work with load balancers yet.  we added the above
+workaround instead for now which is a http static pod that performs healthchecks
+against the TLS apiserver port and lock it down
+
 resource "google_compute_health_check" "master-8443" {
   name               = "${var.instance_name}-${random_id.clusterid.hex}-master-8443"
   check_interval_sec = 5
@@ -136,6 +140,7 @@ resource "google_compute_health_check" "master-8001" {
     port = 8001
   }
 }
+*/
 
 resource "google_compute_http_health_check" "master-health" {
   depends_on = ["google_compute_firewall.master-health"]
@@ -170,8 +175,6 @@ resource "google_compute_target_pool" "icp-master" {
     "${google_compute_http_health_check.master-health.name}"
   ]
 }
-
-
 
 resource "google_compute_forwarding_rule" "master-8001" {
   name        = "${var.instance_name}-${random_id.clusterid.hex}-master-8001"
