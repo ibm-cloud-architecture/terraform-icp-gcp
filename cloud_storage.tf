@@ -12,7 +12,8 @@ resource "google_storage_bucket_object" "icp-install" {
   bucket  = "${element(
     compact(
       concat(google_storage_bucket.icp-binaries.*.name,
-             list(var.existing_storage_bucket))), 0)}"
+             list(var.existing_storage_bucket),
+             list(""))), 0)}"
 }
 
 resource "google_storage_bucket_object" "docker-install" {
@@ -23,7 +24,8 @@ resource "google_storage_bucket_object" "docker-install" {
   bucket  = "${element(
     compact(
       concat(google_storage_bucket.icp-binaries.*.name,
-             list(var.existing_storage_bucket))), 0)}"
+             list(var.existing_storage_bucket),
+             list(""))), 0)}"
 
 }
 
