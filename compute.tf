@@ -111,8 +111,7 @@ resource "google_compute_instance" "icp-master" {
     "${compact(list(
     "icp-master-${random_id.clusterid.hex}",
     "${var.proxy["nodes"] < 1 ? "icp-proxy-${random_id.clusterid.hex}" : ""}",
-    "icp-cluster-${random_id.clusterid.hex}",
-    "${module.nat.routing_tag_regional}"
+    "icp-cluster-${random_id.clusterid.hex}"
     ))}"
   ]
 
@@ -145,6 +144,10 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap.sh"))}
   permissions: '0755'
   path: /opt/ibm/scripts/bootstrap.sh
+- encoding: b64
+  content: ${base64encode("${data.template_file.cloud_provider_conf.rendered}")}
+  permissions: '0644'
+  path: /etc/cfc/conf/gce.conf
 disk_setup:
   /dev/sdb:
      table_type: 'gpt'
@@ -195,8 +198,7 @@ resource "google_compute_instance" "icp-worker" {
   tags = [
     "${compact(list(
     "icp-worker-${random_id.clusterid.hex}",
-    "icp-cluster-${random_id.clusterid.hex}",
-    "${module.nat.routing_tag_regional}"
+    "icp-cluster-${random_id.clusterid.hex}"
     ))}"
   ]
 
@@ -279,8 +281,7 @@ resource "google_compute_instance" "icp-mgmt" {
   tags = [
     "${compact(list(
     "icp-mgmt-${random_id.clusterid.hex}",
-    "icp-cluster-${random_id.clusterid.hex}",
-    "${module.nat.routing_tag_regional}"
+    "icp-cluster-${random_id.clusterid.hex}"
     ))}"
   ]
 
@@ -363,8 +364,7 @@ resource "google_compute_instance" "icp-proxy" {
   tags = [
     "${compact(list(
     "icp-proxy-${random_id.clusterid.hex}",
-    "icp-cluster-${random_id.clusterid.hex}",
-    "${module.nat.routing_tag_regional}"
+    "icp-cluster-${random_id.clusterid.hex}"
     ))}"
   ]
 
@@ -447,8 +447,7 @@ resource "google_compute_instance" "icp-va" {
   tags = [
     "${compact(list(
     "icp-va-${random_id.clusterid.hex}",
-    "icp-cluster-${random_id.clusterid.hex}",
-    "${module.nat.routing_tag_regional}"
+    "icp-cluster-${random_id.clusterid.hex}"
     ))}"
   ]
 

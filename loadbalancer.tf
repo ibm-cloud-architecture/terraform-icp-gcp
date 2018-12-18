@@ -1,3 +1,92 @@
+resource "null_resource" "icp-healthcheck" {
+  depends_on = [
+    "google_compute_router_nat.icp-nat",
+    "google_compute_http_health_check.master-health"
+  ]
+
+  count = "${var.master["nodes"]}"
+
+  # copy and build the http healthcheck image
+  connection {
+    host          = "${element(google_compute_instance.icp-master.*.network_interface.0.network_ip, count.index)}"
+    user          = "icpdeploy"
+    private_key   = "${tls_private_key.ssh.private_key_pem}"
+    bastion_host  = "${google_compute_instance.icp-boot.network_interface.0.access_config.0.nat_ip}"
+  }
+
+  provisioner "file" {
+    content = <<EOF
+{
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+    "name": "icp-http-healthcheck",
+    "namespace": "kube-system",
+    "annotations": {
+        "scheduler.alpha.kubernetes.io/critical-pod": ""
+    }
+  },
+  "spec":{
+    "hostNetwork": true,
+    "containers":[
+      {
+        "name": "icp-http-healthcheck",
+        "image": "ibmcase/icp-http-healthcheck:latest",
+        "imagePullPolicy": "IfNotPresent",
+        "env": [
+          {
+            "name": "NODE_EXTRA_CA_CERTS",
+            "value": "/etc/cfc/conf/ca.crt"
+          }
+        ],
+        "volumeMounts": [
+          {
+            "mountPath": "/etc/cfc/conf",
+            "name": "data"
+          }
+        ]
+      }
+    ],
+    "volumes": [
+      {
+        "hostPath": {
+          "path": "/etc/cfc/conf"
+        },
+        "name": "data"
+      }
+    ]
+  }
+}
+EOF
+    destination = "/tmp/icp-http-healthcheck.json"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "mkdir -p /tmp/icp-http-healthcheck",
+    ]
+  }
+
+  provisioner "file" {
+    source = "${path.module}/healthcheck/"
+    destination = "/tmp/icp-http-healthcheck"
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "docker build -t ibmcase/icp-http-healthcheck:latest /tmp/icp-http-healthcheck"
+    ]
+  }
+
+  provisioner "remote-exec" {
+    inline = [
+      "sudo mkdir -p /etc/cfc/pods",
+      "sudo chmod 700 /etc/cfc/pods",
+      "sudo mv /tmp/icp-http-healthcheck.json /etc/cfc/pods"
+    ]
+  }
+}
+
 resource "google_compute_health_check" "master-8443" {
   name               = "${var.instance_name}-${random_id.clusterid.hex}-master-8443"
   check_interval_sec = 5
@@ -48,6 +137,24 @@ resource "google_compute_health_check" "master-8001" {
   }
 }
 
+resource "google_compute_http_health_check" "master-health" {
+  depends_on = ["google_compute_firewall.master-health"]
+
+  name               = "${var.instance_name}-${random_id.clusterid.hex}-master-health"
+  check_interval_sec = 5
+  timeout_sec        = 5
+  port               = 3000
+  request_path       = "/healthz"
+}
+
+resource "google_compute_http_health_check" "proxy-health" {
+  name               = "${var.instance_name}-${random_id.clusterid.hex}-proxy-health"
+  check_interval_sec = 5
+  timeout_sec        = 5
+  port               = 80
+  request_path       = "/healthz"
+}
+
 resource "google_compute_address" "icp-master" {
   name = "${var.instance_name}-${random_id.clusterid.hex}-master-addr"
 }
@@ -57,6 +164,10 @@ resource "google_compute_target_pool" "icp-master" {
 
   instances = [
     "${google_compute_instance.icp-master.*.self_link}"
+  ]
+
+  health_checks = [
+    "${google_compute_http_health_check.master-health.name}"
   ]
 }
 
@@ -156,6 +267,10 @@ resource "google_compute_target_pool" "icp-proxy" {
       var.proxy["nodes"] > 0 ? length(google_compute_instance.icp-proxy.*.self_link) :
         length(google_compute_instance.icp-proxy.*.self_link) +
         length(google_compute_instance.icp-master.*.self_link))}"
+  ]
+
+  health_checks = [
+    "${google_compute_http_health_check.proxy-health.name}"
   ]
 }
 

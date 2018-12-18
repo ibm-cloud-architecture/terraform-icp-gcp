@@ -22,16 +22,29 @@ resource "google_compute_subnetwork" "icp_region_subnet" {
   }
 }
 
-/*
 resource "google_compute_router" "icp_router" {
   name    = "${var.instance_name}-${random_id.clusterid.hex}-router"
   network = "${google_compute_network.icp_vpc.name}"
 
+/*
   bgp {
     asn = 64514
   }
+*/
 }
 
+resource "google_compute_router_nat" "icp-nat" {
+  name                               = "${var.instance_name}-nat-${random_id.clusterid.hex}"
+  router                             = "${google_compute_router.icp_router.name}"
+  region                             = "${var.region}"
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "LIST_OF_SUBNETWORKS"
+  subnetwork {
+    name = "${google_compute_subnetwork.icp_region_subnet.self_link}"
+  }
+}
+
+/*
 resource "google_compute_router_peer" "icp_router" {
   # join my BGP mesh
   count = "${var.master["nodes"] +
@@ -54,12 +67,3 @@ resource "google_compute_router_peer" "icp_router" {
   peer_asn = 64512
 }
 */
-
-module "nat" {
-  source          = "GoogleCloudPlatform/nat-gateway/google"
-  name            = "${var.instance_name}-${random_id.clusterid.hex}-nat-"
-  region          = "${var.region}"
-  zone            = "${element(local.zones, 0)}"
-  network         = "${google_compute_network.icp_vpc.name}"
-  subnetwork      = "${google_compute_subnetwork.icp_region_subnet.name}"
-}

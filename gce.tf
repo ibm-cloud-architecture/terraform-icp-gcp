@@ -12,7 +12,7 @@ provider "google-beta" {
   project = "${var.project}"
 }
 
-
+data "google_project" "icp_project" {}
 data "google_compute_regions" "available" {}
 data "google_compute_zones" "available" {}
 
