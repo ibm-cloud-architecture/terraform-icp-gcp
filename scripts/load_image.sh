@@ -1,5 +1,7 @@
 #!/bin/bash
 
+exec &> >(tee -a /tmp/load_image.log)
+
 while getopts ":p:r:c:" arg; do
     case "${arg}" in
       p)
@@ -67,18 +69,21 @@ elif [[ "${package_location:0:3}" == "nfs" ]]; then
   fi
 elif [[ "${package_location:0:2}" == "gs" ]]; then
   # Separate out the filename and path
-  sourcedir="/opt/ibm/cluster/images"
   filename=`basename ${package_location}`
-  image_file="${sourcedir}/${filename}"
 
   # copy it down
-  sudo mkdir -p ${sourcedir}
-  gsutil cp ${package_location} ${image_file}
+  gsutil cp ${package_location} /tmp/${filename}
 
   if [ $? -ne 0 ]; then
     echo "An error occurred pulling the binaries. package_location: ${package_location}"
     exit 1
   fi
+
+  sourcedir="/opt/ibm/cluster/images"
+  sudo mkdir -p ${sourcedir}
+  image_file="${sourcedir}/${filename}"
+  sudo mv /tmp/${filename} ${image_file}
+
 else
   # This must be uploaded from local file, terraform should have copied it to /tmp
   image_file="/tmp/$(basename ${package_location})"

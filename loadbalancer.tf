@@ -28,6 +28,25 @@ resource "null_resource" "icp-healthcheck" {
   },
   "spec":{
     "hostNetwork": true,
+    "initContainers": [
+      {
+        "command": [
+          "bash",
+          "-c",
+          "until [[ -f /etc/cfc/conf/ca.crt ]]; do sleep 2; done"
+        ],
+        "image": "ibmcase/icp-http-healthcheck:latest",
+        "imagePullPolicy": "IfNotPresent",
+        "name": "init-http-healthcheck",
+        "resources": {},
+        "volumeMounts": [
+          {
+            "mountPath": "/etc/cfc/conf",
+            "name": "data"
+          }
+        ]
+      }
+    ],
     "containers":[
       {
         "name": "icp-http-healthcheck",
@@ -74,7 +93,8 @@ EOF
 
   provisioner "remote-exec" {
     inline = [
-      "docker build -t ibmcase/icp-http-healthcheck:latest /tmp/icp-http-healthcheck"
+      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do sleep 1; done",
+      "sudo docker build -t ibmcase/icp-http-healthcheck:latest /tmp/icp-http-healthcheck"
     ]
   }
 

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+exec &> >(tee -a /tmp/bootstrap.log)
+
 ubuntu_install(){
   # attempt to retry apt-get update until cloud-init gives up the apt lock
   until apt-get update; do
@@ -11,6 +13,7 @@ ubuntu_install(){
     python \
     python-yaml \
     thin-provisioning-tools \
+    pv \
     nfs-client \
     lvm2; do
     sleep 2
@@ -27,7 +30,7 @@ crlinux_install() {
     libcgroup \
     iptables \
     device-mapper-persistent-data \
-    nfs-util \
+    nfs-utils \
     lvm2
 }
 
@@ -97,6 +100,7 @@ EOF
     systemctl daemon-reload
   fi
 
+  gpasswd -a ${docker_user} docker
   systemctl restart docker
 
   # docker takes a while to start because it needs to prepare the
@@ -120,7 +124,6 @@ EOF
   echo "Docker is installed."
   docker info
 
-  gpasswd -a ${docker_user} docker
 }
 
 ##### MAIN #####
@@ -156,5 +159,8 @@ docker_install
 
 # TODO try mount -a a few times until filestore mounts
 mount -a
+
+mkdir -p /opt/ibm
+touch /opt/ibm/.bootstrap_complete
 
 echo "Complete.."

@@ -3,26 +3,8 @@
 ## This is skipped if installing from
 ## external private registry
 ##########################################
-resource "null_resource" "image_copy" {
-  # Only copy image from local location if not available remotely
-  count = "${var.image_location != "" ? 1 : 0}"
-
-  provisioner "file" {
-    connection {
-      host          = "${google_compute_instance.icp-boot.network_interface.0.network_ip }"
-      user          = "icpdeploy"
-      private_key   = "${tls_private_key.ssh.private_key_pem}"
-      bastion_host  = "${google_compute_instance.icp-boot.network_interface.0.access_config.0.nat_ip }"
-    }
-
-    source = "${var.image_location}"
-    destination = "/tmp/${basename(var.image_location)}"
-  }
-}
-
 resource "null_resource" "image_load" {
   # Only do an image load if we have provided a location. Presumably if not we'll be loading from private registry server
-  depends_on = ["null_resource.image_copy"]
 
   connection {
     host          = "${google_compute_instance.icp-boot.network_interface.0.network_ip }"
@@ -150,8 +132,9 @@ module "icpprovision" {
 
       "kubelet_nodename"                = "hostname"
 
-      #"calico_ipip_enabled"             = "false" # shut off ipip since we've added the pod network as secondary
+      "calico_ipip_enabled"             = "false" # shut off ipip since we've added the pod network as secondary
       "calico_ip_autodetection_method"  = "first-found"
+      "firewall_enabled"                = "${substr(var.image["family"], 0, 4) == "rhel" ? "true" : "false"}" # this is true by default in rhel but false in ubuntu
 
       # An admin password will be generated if not supplied in terraform.tfvars
       "default_admin_password"          = "${local.icppassword}"
@@ -186,6 +169,10 @@ module "icpprovision" {
     hooks = {
       "boot-preconfig" = [
         "while [ ! -f /opt/ibm/.imageload_complete ]; do sleep 5; done"
+      ]
+
+      "cluster-preconfig" = [
+        "while [ ! -f /opt/ibm/.bootstrap_complete ]; do sleep 5; done"
       ]
     }
 

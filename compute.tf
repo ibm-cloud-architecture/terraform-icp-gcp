@@ -7,15 +7,9 @@ resource "tls_private_key" "ssh" {
   algorithm = "RSA"
 }
 
-resource "google_compute_disk" "boot_docker" {
-  count        = "${var.boot["nodes"]}"
-  name         = "${format("${lower(var.instance_name)}-${random_id.clusterid.hex}-boot%02d-dockervol", count.index + 1) }"
-  type         = "pd-ssd"
-  zone         = "${element(local.zones, min(length(local.zones) - 1, count.index))}"
-}
-
 resource "google_compute_instance" "icp-boot" {
   count        = "${var.boot["nodes"]}"
+
   name         = "${format("${lower(var.instance_name)}-${random_id.clusterid.hex}-boot%02d", count.index + 1) }"
 
   machine_type = "${format("custom-%s-%s", var.boot["cpu"], var.boot["memory"])}"
@@ -36,10 +30,6 @@ resource "google_compute_instance" "icp-boot" {
     }
   }
 
-  attached_disk {
-    source = "${element(google_compute_disk.boot_docker.*.self_link, count.index)}"
-  }
-
   network_interface {
     subnetwork  = "${google_compute_subnetwork.icp_region_subnet.self_link}"
 
@@ -49,6 +39,18 @@ resource "google_compute_instance" "icp-boot" {
   }
 
   can_ip_forward = true
+
+  metadata_startup_script = <<EOF
+${substr(var.image["family"], 0, 4) != "rhel" ? "" : "
+#!/bin/bash
+yum -y install cloud-init
+rm -f /var/log/cloud-init.log
+rm -Rf /var/lib/cloud/*
+cloud-init -d init
+cloud-init -d modules --mode=config
+cloud-init -d modules --mode=final
+"}
+EOF
 
   metadata {
     sshKeys = <<EOF
@@ -68,18 +70,6 @@ write_files:
   content: ${base64encode(file("${path.module}/scripts/bootstrap.sh"))}
   permissions: '0755'
   path: /opt/ibm/scripts/bootstrap.sh
-disk_setup:
-  /dev/sdb:
-     table_type: 'gpt'
-     layout: True
-     overwrite: True
-fs_setup:
-  - label: None
-    filesystem: 'ext4'
-    device: '/dev/sdb'
-    partition: 'auto'
-mounts:
-- [ sdb, /var/lib/docker ]
 runcmd:
 - /opt/ibm/scripts/bootstrap.sh -u icpdeploy ${local.docker_package_uri != "" ? "-p ${local.docker_package_uri}" : "" } -d /dev/sdb
 EOF
@@ -132,6 +122,18 @@ resource "google_compute_instance" "icp-master" {
   }
 
   can_ip_forward = true
+
+  metadata_startup_script = <<EOF
+${substr(var.image["family"], 0, 4) != "rhel" ? "" : "
+#!/bin/bash
+yum -y install cloud-init
+rm -f /var/log/cloud-init.log
+rm -Rf /var/lib/cloud/*
+cloud-init -d init
+cloud-init -d modules --mode=config
+cloud-init -d modules --mode=final
+"}
+EOF
 
   metadata {
     sshKeys = <<EOF
@@ -221,6 +223,18 @@ resource "google_compute_instance" "icp-worker" {
 
   can_ip_forward = true
 
+  metadata_startup_script = <<EOF
+${substr(var.image["family"], 0, 4) != "rhel" ? "" : "
+#!/bin/bash
+yum -y install cloud-init
+rm -f /var/log/cloud-init.log
+rm -Rf /var/lib/cloud/*
+cloud-init -d init
+cloud-init -d modules --mode=config
+cloud-init -d modules --mode=final
+"}
+EOF
+
   metadata {
     sshKeys = <<EOF
 ${var.ssh_user}:${file(var.ssh_key)}
@@ -303,6 +317,18 @@ resource "google_compute_instance" "icp-mgmt" {
   }
 
   can_ip_forward = true
+
+  metadata_startup_script = <<EOF
+${substr(var.image["family"], 0, 4) != "rhel" ? "" : "
+#!/bin/bash
+yum -y install cloud-init
+rm -f /var/log/cloud-init.log
+rm -Rf /var/lib/cloud/*
+cloud-init -d init
+cloud-init -d modules --mode=config
+cloud-init -d modules --mode=final
+"}
+EOF
 
   metadata {
     sshKeys = <<EOF
@@ -387,6 +413,18 @@ resource "google_compute_instance" "icp-proxy" {
 
   can_ip_forward = true
 
+  metadata_startup_script = <<EOF
+${substr(var.image["family"], 0, 4) != "rhel" ? "" : "
+#!/bin/bash
+yum -y install cloud-init
+rm -f /var/log/cloud-init.log
+rm -Rf /var/lib/cloud/*
+cloud-init -d init
+cloud-init -d modules --mode=config
+cloud-init -d modules --mode=final
+"}
+EOF
+
   metadata {
     sshKeys = <<EOF
 ${var.ssh_user}:${file(var.ssh_key)}
@@ -436,7 +474,7 @@ resource "google_compute_disk" "va_docker" {
 }
 
 resource "google_compute_instance" "icp-va" {
-  count = "${var.proxy["nodes"]}"
+  count = "${var.va["nodes"]}"
 
   name         = "${format("${lower(var.instance_name)}-${random_id.clusterid.hex}-va%02d", count.index + 1) }"
   machine_type = "${format("custom-%s-%s", var.va["cpu"], var.va["memory"])}"
@@ -468,6 +506,18 @@ resource "google_compute_instance" "icp-va" {
   }
 
   can_ip_forward = true
+
+  metadata_startup_script = <<EOF
+${substr(var.image["family"], 0, 4) != "rhel" ? "" : "
+#!/bin/bash
+yum -y install cloud-init
+rm -f /var/log/cloud-init.log
+rm -Rf /var/lib/cloud/*
+cloud-init -d init
+cloud-init -d modules --mode=config
+cloud-init -d modules --mode=final
+"}
+EOF
 
   metadata {
     sshKeys = <<EOF
@@ -705,7 +755,9 @@ resource "google_compute_region_instance_group_manager" "icp-mgmt" {
   target_size  = "${var.management["nodes"]}"
   wait_for_instances = true
 }
+*/
 
+/*
 
 resource "google_compute_region_instance_group_manager" "icp-worker" {
   name = "${var.instance_name}-${random_id.clusterid.hex}-worker"
@@ -736,7 +788,7 @@ resource "google_compute_instance_template" "icp-worker" {
 
   disk {
     source_image = "${data.google_compute_image.base_compute_image.self_link}"
-    disk_size_gb = "${var.master["disk_size"]}"
+    disk_size_gb = "${var.worker["disk_size"]}"
     disk_type    = "pd-standard"
     boot         = true
     auto_delete  = true
@@ -746,7 +798,7 @@ resource "google_compute_instance_template" "icp-worker" {
     boot        = false
     auto_delete = true
     device_name = "sdb"
-    disk_size_gb = "${var.master["docker_disk_size"]}"
+    disk_size_gb = "${var.worker["docker_disk_size"]}"
     disk_type    = "pd-standard"
     source = ""
   }
@@ -798,7 +850,9 @@ EOF
     scopes = ["userinfo-email", "compute-ro", "storage-ro"]
   }
 }
+*/
 
+/*
 resource "google_compute_region_instance_group_manager" "icp-proxy" {
   name = "${var.instance_name}-${random_id.clusterid.hex}-proxy"
   base_instance_name         = "${var.instance_name}-${random_id.clusterid.hex}-proxy"
