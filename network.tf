@@ -25,12 +25,6 @@ resource "google_compute_subnetwork" "icp_region_subnet" {
 resource "google_compute_router" "icp_router" {
   name    = "${var.instance_name}-${random_id.clusterid.hex}-router"
   network = "${google_compute_network.icp_vpc.name}"
-
-/*
-  bgp {
-    asn = 64514
-  }
-*/
 }
 
 resource "google_compute_router_nat" "icp-nat" {
@@ -43,27 +37,3 @@ resource "google_compute_router_nat" "icp-nat" {
     name = "${google_compute_subnetwork.icp_region_subnet.self_link}"
   }
 }
-
-/*
-resource "google_compute_router_peer" "icp_router" {
-  # join my BGP mesh
-  count = "${var.master["nodes"] +
-              var.proxy["nodes"] +
-              var.management["nodes"] +
-              var.va["nodes"] +
-              var.worker["nodes"]}"
-
-  name = "${format("${var.instance_name}-${random_id.clusterid.hex}-router-peer-%d", count.index)}"
-  router = "${google_compute_router.icp_router.name}"
-
-  interface = "${format("interface-%d", count.index)}"
-  peer_ip_address = "${element(concat(
-    google_compute_instance.icp-master.*.network_interface.0.network_ip,
-    google_compute_instance.icp-proxy.*.network_interface.0.network_ip,
-    google_compute_instance.icp-mgmt.*.network_interface.0.network_ip,
-    google_compute_instance.icp-va.*.network_interface.0.network_ip,
-    google_compute_instance.icp-worker.*.network_interface.0.network_ip), count.index)}"
-
-  peer_asn = 64512
-}
-*/

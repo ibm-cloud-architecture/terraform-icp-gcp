@@ -19,10 +19,9 @@ resource "null_resource" "image_load" {
   }
 
   provisioner "remote-exec" {
-
     # We need to wait for cloud init to finish it's boot sequence.
     inline = [
-      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do sleep 1; done",
+      "while [ ! -f /opt/ibm/.bootstrap_complete ]; do sleep 1; done",
       "export REGISTRY_USERNAME=${local.docker_username}",
       "export REGISTRY_PASSWORD=${local.docker_password}",
       "sudo mv /tmp/load_image.sh /opt/ibm/scripts/",
@@ -132,7 +131,6 @@ module "icpprovision" {
 
       "kubelet_nodename"                = "hostname"
 
-      "calico_ipip_enabled"             = "false" # shut off ipip since we've added the pod network as secondary
       "calico_ip_autodetection_method"  = "first-found"
       "firewall_enabled"                = "${substr(var.image["family"], 0, 4) == "rhel" ? "true" : "false"}" # this is true by default in rhel but false in ubuntu
 
