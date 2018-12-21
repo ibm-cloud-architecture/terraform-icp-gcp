@@ -133,7 +133,7 @@ variable "docker_package_location" {
 
 variable "image_location" {
   description = "URI for image package location, e.g. http://<myhost>/ibm-cloud-private-x86_64-2.1.0.2.tar.gz or nfs:<myhost>/ibm-cloud-private-x86_64-2.1.0.2.tar.gz"
-  default     = "icp-install/ibm-cloud-private-x86_64-3.1.0.tar.gz"
+  default     = ""
 }
 
 variable "icppassword" {
