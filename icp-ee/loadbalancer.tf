@@ -87,7 +87,7 @@ EOF
   }
 
   provisioner "file" {
-    source = "${path.module}/healthcheck/"
+    source = "${path.module}/../healthcheck/"
     destination = "/tmp/icp-http-healthcheck"
   }
 

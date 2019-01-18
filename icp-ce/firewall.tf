@@ -31,6 +31,22 @@ resource "google_compute_firewall" "cluster-traffic" {
   target_tags = ["icp-cluster-${random_id.clusterid.hex}"]
 }
 
+resource "google_compute_firewall" "pod-traffic" {
+  name    = "${var.instance_name}-${random_id.clusterid.hex}-allow-pod"
+  network = "${google_compute_network.icp_vpc.self_link}"
+
+  allow {
+    protocol = "all"
+  }
+
+  priority = 800
+
+  source_ranges = [
+    "${var.pod_network_cidr}"
+  ]
+  target_tags = ["icp-cluster-${random_id.clusterid.hex}"]
+}
+
 resource "google_compute_firewall" "master" {
   name    = "${var.instance_name}-${random_id.clusterid.hex}-master-allow"
   network = "${google_compute_network.icp_vpc.self_link}"

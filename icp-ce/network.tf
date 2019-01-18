@@ -15,11 +15,6 @@ resource "google_compute_subnetwork" "icp_region_subnet" {
 
   region        = "${var.region}"
   network       = "${google_compute_network.icp_vpc.self_link}"
-
-  secondary_ip_range {
-   range_name    = "podnet"
-   ip_cidr_range = "${var.pod_network_cidr}"
-  }
 }
 
 resource "google_compute_router" "icp_router" {
