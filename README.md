@@ -31,7 +31,7 @@ The following diagram outlines the infrastructure architecture.
 See [documentation](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.1/installing/plan_capacity.html) for examples of node sizings.  We have provided some defaults here.
 
 | Node | Count | CPU | Memory | Disk | Comments |
-|--------|------------|--------------|
+|------|-------|-----|--------|------|----------|
 | Boot | 1 | 2 | 4 | 100 + 100 | used for installation only |
 | Master |1 or 3| 8 | 32 | 100 + 100 | 3 for HA, 1 for ICP-ce  |
 | Management | 3 | 8 | 16 | 100 + 100 | Specify larger disks for more log storage.  If 0 management nodes are specified, all management pods are placed on master nodes.  Monitoring and logging can be disabled by specifying `monitoring` and `logging` in the `disabled_management_services` list. |
