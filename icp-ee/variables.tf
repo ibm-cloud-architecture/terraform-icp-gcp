@@ -146,11 +146,6 @@ variable "icp_inception_image" {
   default     = "ibmcom/icp-inception-amd64:3.1.0-ee"
 }
 
-variable "existing_storage_bucket" {
-  description = "Bucket where ICP binaries are located"
-  default = ""
-}
-
 variable "cluster_cname" {
   default = ""
 }
