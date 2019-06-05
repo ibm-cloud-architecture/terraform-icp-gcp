@@ -8,7 +8,7 @@ variable "region" {
 }
 
 variable "project" {
-  default = ""
+  default = ""      # Google Cloud Project where you deploy the cluster to. This is the project ID
 }
 
 variable "zones" {
@@ -17,7 +17,7 @@ variable "zones" {
 }
 
 variable "ssh_user" {
-  default = "icpdeploy"
+  default = "icpdeploy" # This is the ssh user from ICP master to managed nodes
 }
 
 variable "ssh_key" {
