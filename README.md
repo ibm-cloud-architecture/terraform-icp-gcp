@@ -91,6 +91,7 @@ See [Terraform documentation](https://www.terraform.io/intro/getting-started/var
 
    ```bash
    cd icp-ee
+   cp terraform.tfvars .
    terraform init
    ```
 
