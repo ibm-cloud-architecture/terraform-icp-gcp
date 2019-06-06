@@ -1,6 +1,6 @@
 # Terraform for IBM Cloud Private on Google Cloud Platform
 
-This Terraform configurations uses the [Google Cloud provider](https://www.terraform.io/docs/providers/google/index.html) to provision virtual machines using Google Compute Engine and deploys [IBM Cloud Private](https://www.ibm.com/cloud-computing/products/ibm-cloud-private/) on them.  This Terraform template automates best practices learned from installing ICP at numerous client sites in production and applying them to cloud-native resources on Google Cloud Platform.
+This Terraform configuration uses the [Google Cloud provider](https://www.terraform.io/docs/providers/google/index.html) to provision virtual machines using Google Compute Engine and deploys [IBM Cloud Private (ICP)](https://www.ibm.com/cloud-computing/products/ibm-cloud-private/) on them.  This Terraform template automates best practices learned from installing ICP at numerous client sites in production and applying them to cloud-native resources on Google Cloud Platform.
 
 This template (on the [`master` branch](https://github.com/ibm-cloud-architecture/terraform-icp-gcp/tree/master)) provisions a highly-available cluster with ICP 3.1.0 Enterprise Edition.
 
@@ -18,17 +18,17 @@ The following diagram outlines the infrastructure architecture.
 
 ![ICP on GCE architecture](static/icp_on_gce.png)
 
-- A global VPC and regional subnet is created.  
+- A global VPC and regional subnets are created.  
 - The ICP components are deployed across three availability zones in the region.  
 - Cloud Load Balancers are set up for inbound traffic to applications and control plane.  
   - Since Cloud Load Balancers only support HTTP healthchecks, a small NodeJS healthcheck container runs on the masters that exposes `/healthz` healthcheck from the API server on plain HTTP listening on port 3000.  Firewall rules will only allow the Google healthcheck subnet to access this port.
 - (Not pictured) Cloud NAT is set up for outbound Internet connections.
-- (Not pictured) Firewall Rules are set up between cluster nodes
+- (Not pictured) Firewall rules are set up between cluster nodes
 - (Not pictured) Google Filestore is used for image registry persistence
 
 ### VM instance sizes
 
-See [documentation](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.1/installing/plan_capacity.html) for examples of node sizings.  We have provided some defaults here.
+See [documentation](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.1/installing/plan_capacity.html) for examples of ICP node sizings.  We have provided some defaults here.
 
 | Node | Count | CPU | Memory | Disk | Comments |
 |------|-------|-----|--------|------|----------|
@@ -45,7 +45,7 @@ See [documentation](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.1/
 
 1. To use Terraform automation, download the Terraform binaries [here](https://www.terraform.io/).
 
-   On MacOS, you can acquire it using [homebrew](brew.sh) using this command:
+   On MacOS, you can acquire it using [homebrew](brew.sh) with following command:
 
    ```bash
    brew install terraform
@@ -68,7 +68,7 @@ See [documentation](https://www.ibm.com/support/knowledgecenter/en/SSBS6K_3.1.1/
 |name | required                        | value        |
 |----------------|------------|--------------|
 | `region`   | yes           | Region that the ICP cluster will be created in.  By default, uses `us-central1`.  Note that for an HA installation, the selected region should have at least 3 availability zones. |
-| `project`   | yes           | Project that the ICP cluster will be created in. |
+| `project`   | yes           | Project (the actual project ID) that the ICP cluster will be created in. |
 | `zones`          | yes           | Availability Zones that the ICP will be created in, e.g. `[ "a", "b", "c"]` to install in three availability zones.  By default, uses `["a", "b", "c"]`.  Note to select the region that has at least 3 availability zones for high availability, and that `us-east1` should use `["b", "c", "d"]`.  |
 | `ssh_user`     | yes          | Username to ssh into the instances as, will be created     |
 | `ssh_key`     | yes          | SSH public key to add to the compute instances, will be added     |
@@ -91,6 +91,7 @@ See [Terraform documentation](https://www.terraform.io/intro/getting-started/var
 
    ```bash
    cd icp-ee
+   cp terraform.tfvars .
    terraform init
    ```
 
